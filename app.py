@@ -8,7 +8,7 @@ from utils.logger import logger
 
 _ = load_dotenv(find_dotenv())  # read local .env file
 
-st.title("Move GPT - AI Agent that uses imdb API to answer questions about movies and TVs")
+st.title("Dest GPT - AI Agent that uses Trip Advisor API to answer questions about travel destinations")
 logger.propagate = False
 # Initialize chat history
 if "messages" not in st.session_state:
@@ -21,7 +21,7 @@ for message in st.session_state.messages:
 
 # React to user input
 if prompt := st.chat_input(
-    "I am a helpful Imdb bot. Ask me anything about movies or TV Shows!"
+    "I am a helpful travel destinations bot. Ask me anything about travel destinations!"
 ):
     try:
         tagger = Tagger(os.getenv("OPENAI_API_KEY"))
@@ -47,6 +47,6 @@ if prompt := st.chat_input(
         st.session_state.messages.append({"role": "assistant", "content": summary})
     except Exception as e:
         logger.debug(f"Error: {e}")
-        message = f"I was not able to process the request. I am an imdb bot and I can only answer questions about movies and TV shows."
+        message = f"I was not able to process the request. I am a travel destinations bot and I can only answer questions about travel destinations."
         st.markdown(message)
         st.session_state.messages.append({"role": "assistant", "content": message})

@@ -66,7 +66,7 @@ class Tagger:
 
     def extract_information(self, input: str) -> UserIntent:
         """
-        Extracts the name of the movie and the intent from the user's input using the GPT-3 model.
+        Extracts the travel destination and the intent from the user's input using the GPT-3 model.
 
         Args:
             input (str): The user's input string.
@@ -77,13 +77,13 @@ class Tagger:
         self.conversation_buffer.load_memory_variables({})
         intent: UserIntent = self.chain.invoke(
             {
-                "input": f"Exract the name of the movie and the intent from the user's input.  {input}"
+                "input": f"Extract the travel destination and the intent from the user's input.  {input}"
             },
         )
         self.conversation_buffer.save_context(
             {"input": input},
             {
-                "output": f"User wants to know about the {intent.name} and want to talk about the {intent.intent}."
+                "output": f"User wants to know about {intent.name} and wants to talk about the {intent.intent}."
             },
         )
         print(intent)

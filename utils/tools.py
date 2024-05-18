@@ -1,279 +1,50 @@
 import requests
 import json
-from pydantic import BaseModel, Field
+from pydantic.v1 import BaseModel, Field
 from langchain.agents import tool
 from dotenv import load_dotenv, find_dotenv
 import os
 
-class GetCastDetailsInput(BaseModel):
-    id: str = Field(..., title="ID", description="ID of the movie or the TV show")
+class LocationInput(BaseModel):
+    name: str = Field(description="name of the location")
 
+class HotelInput(LocationInput):
+    checkIn_year: int = Field(description="year for checking in")
+    checkIn_month: int = Field(description="month for checking in")
+    checkIn_day: int = Field(description="day for checking in")
+    checkOut_year: int = Field(description="year for checking out")
+    checkOut_month: int = Field(description="month for checking out")
+    checkOut_day: int = Field(description="day for checking out")
 
-class GetRatingInput(BaseModel):
-    id: str = Field(..., title="ID", description="ID of the movie or the TV show")
-
-
-class GetAwardsInput(BaseModel):
-    id: str = Field(..., title="ID", description="ID of the movie or the TV show")
-
-
-class GetPlotInput(BaseModel):
-    id: str = Field(..., title="ID", description="ID of the movie or the TV show")
-
-class GetInfo(BaseModel):
-    name: str = Field(..., title="Name", description="Name of the movie or the TV show")
-
-class GetPosterImages(BaseModel):
-    name: str = Field(..., title="Name", description="Name of the movie or the TV show")
+class FlightInput(BaseModel):
+    sourceAirport: str = Field(description="airport code of source airport")
+    destAirport: str = Field(description="airport code of destination airport")
+    year: int = Field(description="year of the flight")
+    month: int = Field(description="month of the flight")
+    day: int = Field(description="day of the flight")
+    round_trip: bool = Field(description="whether the flight is round trip")
+    num_adults: int = Field(description="number of adults")
+    num_seniors: int = Field(description="number of seniors")
+    service_class: str = Field(description="class of flight (ECONOMY, PREMIUM_ECONOMY, BUSINESS, or FIRST)")
+    
 
 def get_headers():
     _ = load_dotenv(find_dotenv())  # read local .env file
-    #return {
-    #    "Authorization": f"Bearer {os.getenv('TMDB_BEARER_TOKEN')}",
-    #}
-    #print('tmdb token:' + os.getenv('TMDB_API_TOKEN'))
     return {
-    'accept': 'application/json',
-    'Authorization': 'Bearer '+ os.getenv('TMDB_API_TOKEN')
+        'accept': 'application/json',
+        'X-RapidAPI-Host': 'tripadvisor16.p.rapidapi.com',
+        'X-RapidAPI-Key': os.getenv('RAPID_TRIP_ADVISOR_API_TOKEN')
     }
 
 from utils.logger import logger
 
 foundMovie = {}
 
-def get_id(name: str) -> str:
-    """Get the ID of the movie or the TV show from the name"""
+@tool(args_schema=LocationInput)
+def get_restaurants(name: str) -> str:
+    """Get the restraunts near the input location name"""
 
-    url = "https://api.themoviedb.org/3/search/multi?"
-    #'https://api.themoviedb.org/3/discover/movie?include_adult=false&include_video=false&language=en-US&page=1&sort_by=popularity.desc';
-
-    headers = {
-        'accept': 'application/json',
-        'Authorization': 'Bearer ' + os.getenv('TMDB_API_TOKEN')
-    }
-
-    querystring = {"query":name}
-    try:
-        response = requests.get(url, headers=headers, params=querystring)
-        data = response.json()
-        # Find the first item with an 'id' key and break the loop
-        for item in data['results']:
-            if 'id' in item:
-                movie_id = item['id']
-                foundMovie = item
-                print(foundMovie)
-                break
-        logger.debug(f"Movie ID was succesfully retrieved. Movie ID: {movie_id}")
-        return movie_id
-    except Exception as e:
-        logger.debug(f"Not able to find the movie ID for the movie: {name}")
-        logger.debug(f"Error: {e}")
-        return f"Movie ID not found for the movie: {name}"
-
-@tool(args_schema=GetCastDetailsInput)
-def get_cast_details(id: str) -> str:
-    """Get the cast details of the movie or the TV show from the ID"""
-
-    url = "https://api.themoviedb.org/3/movie/"+id+"/credits"
-    querystring = {"id": id}
-    headers = get_headers()
-    response = requests.get(url, headers=headers)
-    print(response.json()['cast'])
-    logger.debug(f"Inside the get_cast_details function")
-    if response.status_code != 200:
-        logger.debug(f"Response status code: {response.status_code}")
-        logger.debug(f"Response headers: {response.headers}")
-        logger.debug(f"Response body: {response.text}")
-        return f"Not able to retrieve the cast for the movie with ID: {id}. Response text: {response.text}"
-    else:
-        logger.debug(f"Cast retrieved successfully")
-    cast = response.json()['cast']
-    crew = response.json()['crew']
-    logger.debug(response.json())
-    ret = ""
-    if(len(cast) >0 ):
-        logger.debug(cast['edges'])
-        for edge in cast['edges']:
-            ret += f"""Actor Name: {edge['node']['name']['nameText']['text']}\n"""
-            ret += "------------------------------------------------------\n"
-        logger.debug(f"Returning the cast details succesfully")
-        return ret
-    elif(len(response.json()['crew']) > 0):
-        ret += "Directed by:" + crew[0]['name'] + "\n"
-        #ret += response.json()['overview']
-        return ret
-    else:
-        return "Not found. Please try another question."
-
-
-## Rating is not supported by themoviedb.org's API
-# @tool(args_schema=GetRatingInput)
-# def get_rating(id: str) -> str:
-#     """Get the rating of the movie or the TV show from the ID"""
-
-#     url = "https://imdb-com.p.rapidapi.com/title/ratings"
-
-#     querystring = {"tconst": id}
-#     headers = get_headers()
-#     response = requests.get(url, headers=headers, params=querystring)
-#     if response.status_code != 200:
-#         logger.debug(f"Response status code: {response.status_code}")
-#         logger.debug(f"Response headers: {response.headers}")
-#         logger.debug(f"Response body: {response.text}")
-#         return f"Not able to retrieve the rating for the movie with ID: {id}. Response text: {response.text}"
-#     else:
-#         logger.debug(f"Rating retrieved successfully")
-#     data = response.json()
-#     aggregate_rating = data['data']['entityMetadata']['ratingsSummary']['aggregateRating']
-    
-#     # Initialize the summary string
-#     summary = f"Aggregate Rating: {aggregate_rating}\n\n"
-    
-#     # Check if histogramData exists
-#     if 'histogramData' in data['data']['entityMetadata']:
-#         # Extract the histogram data
-#         histogram_data = data['data']['entityMetadata']['histogramData']
-        
-#         # Extract the country-specific ratings
-#         country_ratings = histogram_data['countryData']
-        
-#         # Add country-specific ratings to the summary
-#         summary += "Country-specific Ratings:\n"
-#         for country_rating in country_ratings:
-#             summary += f"{country_rating['displayText']}: {country_rating['aggregateRating']} (Votes: {country_rating['totalVoteCount']})\n"
-        
-#         # Extract the histogram values
-#         histogram_values = histogram_data['histogramValues']
-        
-#         # Add histogram values to the summary
-#         summary += "\nHistogram Values:\n"
-#         for histogram_value in histogram_values:
-#             summary += f"Rating: {histogram_value['rating']} (Votes: {histogram_value['formattedVoteCount']})\n"
-#     # Print the entire output string
-#     logger.debug(f"Returning the rating details succesfully")
-#     return summary
-
-
-@tool(args_schema=GetAwardsInput)
-def get_awards(id: str) -> str:
-    """Get the awards of the movie or the TV show from the ID"""
-
-    #url = "https://imdb146.p.rapidapi.com/v1/title/"
-    url = "https://api.themoviedb.org/3/find/"+id
-
-    querystring = {"id": id}
-    headers = get_headers()
-    response = requests.get(url, headers=headers)
-    if response.status_code != 200:
-        logger.debug(f"Response status code: {response.status_code}")
-        logger.debug(f"Response headers: {response.headers}")
-        logger.debug(f"Response body: {response.text}")
-        return f"Not able to retrieve the awards for the movie with ID: {id}. Response text: {response.text}"
-    data = response.json()
-    print(data['wins'])
-    print(data['nominations'])
-    print(data['prestigiousAwardSummary'])
-    # Create a summary string
-    summary = f"Total Nominations: {data['wins']['total']}\n" \
-          f"Total Awards: {data['wins']['total']}\n" \
-          f"Number of Wins: {data['prestigiousAwardSummary']['wins']}\n" \
-          f"Last Prestigious Award: {data['prestigiousAwardSummary']['award']['text']} (ID: {data['prestigiousAwardSummary']['award']['id']})"
-    logger.debug(f"Returning the awards details succesfully")
-    return summary
-    # # Extract the title, year, and highlighted award information
-    # title = data["title"]
-    # year = data["year"]
-    # highlighted_award = data["awardsSummary"]["highlighted"]["awardName"]
-    # highlighted_award_count = data["awardsSummary"]["highlighted"]["count"]
-    # highlighted_award_is_winner = (
-    #     "Winner" if data["awardsSummary"]["highlighted"]["isWinner"] else "Nominated"
-    # )
-
-    # # Append the title, year, and highlighted award information to the summary string
-    # summary += f"Title: {title}\n"
-    # summary += f"Year: {year}\n"
-    # summary += (
-    #     f"Highlighted Award: {highlighted_award} ({highlighted_award_count} times)\n"
-    # )
-    # summary += f"Status: {highlighted_award_is_winner}\n"
-
-    # # Append the other nominations and wins count to the summary string
-    # summary += (
-    #     f"Other Nominations Count: {data['awardsSummary']['otherNominationsCount']}\n"
-    # )
-    # summary += f"Other Wins Count: {data['awardsSummary']['otherWinsCount']}\n"
-
-    # # Append the highlighted ranking information to the summary string
-    # summary += f"Highlighted Ranking: {data['highlightedRanking']['label']} (Rank: {data['highlightedRanking']['rank']})\n"
-    
-
-
-@tool(args_schema=GetPlotInput)
-def get_plot(id: str) -> str:
-    """Get the plot of the movie or the TV show from the ID"""
-
-    if foundMovie:
-        print(foundMovie)
-        return foundMovie['overview']
-    #url = "https://imdb146.p.rapidapi.com/v1/title/"
-    url = "https://api.themoviedb.org/3/movie/"+id  #+"?language=en-US"
-    headers = get_headers()
-    print("plot")
-    print(url)
-    response = requests.get(url, headers=headers)
-    print(response.json())
-    if response.status_code != 200:
-        logger.debug(f"Response status code: {response.status_code}")
-        logger.debug(f"Response headers: {response.headers}")
-        logger.debug(f"Response body: {response.text}")
-        return f"Not able to retrieve the plot for the movie with ID: {id}. Response text: {response.text}"
-    data = response.json()['overview']
-    # Initialize an empty string to hold the formatted output
-    plots_summary = response.json()['overview'] #['plotText']['plainText']
-
-    # # Iterate over the plots and append each plot's text to the summary string
-    # for plot in data["plots"][:5]:
-    #     plots_summary += plot["text"] + "\n\n"
-    logger.debug(f"Returning the plot details succesfully")
-    return plots_summary  # Return the formatted output
-
-@tool(args_schema=GetInfo)
-def get_info(name: str) -> str:
-    """Return overview of the movie or TV program"""
-    url = "https://api.themoviedb.org/3/search/movie?"
-    #'https://api.themoviedb.org/3/discover/movie?include_adult=false&include_video=false&language=en-US&page=1&sort_by=popularity.desc';
-
-    #headers = get_headers()
-    headers = {
-        'accept': 'application/json',
-        'Authorization': 'Bearer ' +  os.getenv('TMDB_API_TOKEN')
-    }
-
-    querystring = {"query":name}
-    try:
-        response = requests.get(url, headers=headers, params=querystring)
-        data = response.json()
-        # Find the first item with an 'id' key and break the loop
-        for item in data['results']:
-            if 'id' in item:
-                movie_id = item['id']
-                foundMovie = item
-                print(foundMovie)
-                break
-        logger.debug(f"Movie ID was succesfully retrieved. Movie ID: {movie_id}")
-        return foundMovie
-    except Exception as e:
-        logger.debug(f"Not able to find the movie ID for the movie: {name}")
-        logger.debug(f"Error: {e}")
-        return f"Movie info not found for the movie: {name}"
-    
-@tool(args_schema=GetPosterImages)
-def get_images(name: str) -> str:
-    """Get the poster and images of the movie or the TV show from the name"""
-
-    #url = "https://imdb146.p.rapidapi.com/v1/title/"
-    url = "https://api.themoviedb.org/3/search/movie?"
-
+    url = "https://tripadvisor16.p.rapidapi.com/api/v1/restaurant/searchLocation"
     querystring = {"query": name}
     headers = get_headers()
     response = requests.get(url, headers=headers, params=querystring)
@@ -281,28 +52,142 @@ def get_images(name: str) -> str:
         logger.debug(f"Response status code: {response.status_code}")
         logger.debug(f"Response headers: {response.headers}")
         logger.debug(f"Response body: {response.text}")
-        return f"Not able to retrieve the awards for the movie with ID: {id}. Response text: {response.text}"
+        return f"Not able to retrieve the location with name: {name}. Response text: {response.text}"
+    else:
+        logger.debug(f"Requested successfully")
     data = response.json()
-    foundMovie = None
-    for item in data['results']:
-        if name in item['title']:
-            movie_id = item['id']
-            foundMovie = item
-            print(foundMovie)
-            break
+    if(not data or len(data) == 0):
+        return "Not found. Please try another question"
+    location = data[0]["locationId"]
 
-    # Create a summary string
-    prefix = "https://images.tmdb.org/t/p/original"
-    if not foundMovie:
-        imageUrl = "not found"
-    else:    
-        imageUrl = foundMovie['poster_path']
-        if not imageUrl:
-            imageUrl = foundMovie['backdrop_path']
-        if not imageUrl:
-            imageUrl = "Not found"    
-        else:
-            imageUrl = prefix + imageUrl
-    logger.debug(f"Returning the image succesfully")
-    print(imageUrl)
-    return imageUrl
+    url = "https://tripadvisor16.p.rapidapi.com/api/v1/restaurant/searchRestaurants"
+    querystring = {"locationId": location}
+    headers = get_headers()
+    response = requests.get(url, headers=headers, params=querystring)
+    if response.status_code != 200:
+        logger.debug(f"Response status code: {response.status_code}")
+        logger.debug(f"Response headers: {response.headers}")
+        logger.debug(f"Response body: {response.text}")
+        return f"Not able to retrieve the location with ID: {location}. Response text: {response.text}"
+    else:
+        logger.debug(f"Restraunts retrieved successfully")
+    data = response.json()['data']
+    if not data or len(data) == 0:
+        return "Not able to retrieve any restraunts. Please try another question"
+    output = ""
+    for val in data:
+        output += f"Restraunt Name: {val['name']}\n"
+        output += val['currentOpenStatusText'] + "\n"
+        output += "------------------------------------------------------\n"
+    logger.debug(output)
+    return output
+
+@tool(args_schema=HotelInput)
+def get_hotels(name: str, checkIn_year: int, checkIn_month: int, checkIn_day: int, checkOut_year: int, checkOut_month: int, checkOut_day: int) -> str:
+    """Get the hotels near the input location name"""
+
+    url = "https://tripadvisor16.p.rapidapi.com/api/v1/hotels/searchLocation"
+    querystring = {"query": name}
+    headers = get_headers()
+    response = requests.get(url, headers=headers, params=querystring)
+    if response.status_code != 200:
+        logger.debug(f"Response status code: {response.status_code}")
+        logger.debug(f"Response headers: {response.headers}")
+        logger.debug(f"Response body: {response.text}")
+        return f"Not able to retrieve the location with name: {name}. Response text: {response.text}"
+    else:
+        logger.debug(f"Requested successfully")
+    data = response.json()
+    if(not data or len(data) == 0):
+        return "Not found. Please try another question"
+    location = data[0]["documentId"]
+    
+    url = "https://tripadvisor16.p.rapidapi.com/api/v1/hotels/searchHotels"
+    querystring = {"geoId": location, "checkIn": f"{checkIn_year}-{checkIn_month}-{checkIn_day}", "checkOut": f"{checkOut_year}-{checkOut_month}-{checkOut_day}"}
+    headers = get_headers()
+    response = requests.get(url, headers=headers, params=querystring)
+    if response.status_code != 200:
+        logger.debug(f"Response status code: {response.status_code}")
+        logger.debug(f"Response headers: {response.headers}")
+        logger.debug(f"Response body: {response.text}")
+        return f"Not able to retrieve the hotels at location: {name}. Response text: {response.text}"
+    else:
+        logger.debug(f"Hotels retrieved successfully")
+    data = response.json()['data']
+    if not data or len(data) == 0:
+        return "Not able to retrieve any hotels. Please try another question"
+    output = ""
+    for val in data:
+        output += f"Hotel Name: {val['title']}\n"
+        output += f"Rated {val['bubbleRating']['rating']} by {val['bubbleRating']['count']} users\n"
+        output += "------------------------------------------------------\n"
+    logger.debug(output)
+    return output
+    
+
+@tool(args_schema=LocationInput)
+def get_airports(name: str) -> str:
+    """Get the airports near the input location name"""
+    url = "https://tripadvisor16.p.rapidapi.com/api/v1/flights/searchAirport"
+    headers = get_headers()
+    response = requests.get(url, headers=headers, params={'query': name})
+    print(response.json())
+    if response.status_code != 200:
+        logger.debug(f"Response status code: {response.status_code}")
+        logger.debug(f"Response headers: {response.headers}")
+        logger.debug(f"Response body: {response.text}")
+        return f"Not able to retrieve the airports by: {name}. Response text: {response.text}"
+    data = response.json()
+    if not data or len(data) == 0:
+        return "Not able to retrieve any airports. Please try another question"
+    output = ""
+    for val in data:
+        output += f"Short Name: {val['shortName']}\n"
+        output += f"Full Name: {val['name']}\n"
+        output += f"Airport Code: {val['airportCode']}\n"
+        output += "------------------------------------------------------\n"
+    logger.debug(output)
+    return output
+    
+@tool(args_schema=FlightInput)
+def get_flights(sourceAirport: str, destAirport: str, year: int, month: int, day: int, round_trip: bool, num_adults: int, num_seniors: int, service_class: str) -> str:
+    """Get the flights with the input source airport and destination airport codes"""
+
+    url = "https://tripadvisor16.p.rapidapi.com/api/v1/flights/searchFlights"
+
+    querystring = {
+        "sourceAirportCode": sourceAirport,
+        "destinationAirportCode": destAirport,
+        "date": f"{year}-{month}-{day}",
+        "itineraryType": "ROUND_TRIP" if round_trip else "ONE_WAY",
+        "sortOrder": "ML_BEST_VALUE",
+        "numAdults": num_adults,
+        "numSeniors": num_seniors,
+        "classOfService": service_class
+    }
+    headers = get_headers()
+    response = requests.get(url, headers=headers, params=querystring)
+    if response.status_code != 200:
+        logger.debug(f"Response status code: {response.status_code}")
+        logger.debug(f"Response headers: {response.headers}")
+        logger.debug(f"Response body: {response.text}")
+        return f"Not able to retrieve any flights from {sourceAirport} to {destAirport}. Response text: {response.text}"
+    data = response.json()['flights']
+    if not data or len(data) == 0:
+        return f"Not able to retrieve any flights. Please try another question"
+    output = ""
+    for val in data:
+        for i, segment in enumerate(val['segments'], 1):
+            output += f"Segment {i}:\n"
+            for j, leg in enumerate(segment['legs'], 1):
+                output += f"Leg {j}:\n"
+                output += f"Origin Airport Code: {leg['originStationCode']}\n"
+                output += f"Destination Airport Code: {leg['destinationStationCode']}\n"
+                output += f"Departure Date-Time: {leg['departureDateTime']}\n"
+                output += f"Arrival Date-Time: {leg['arrivalDateTime']}\n"
+        output += "Purchase Links:\n"
+        for link in val['purchaseLinks']:
+            output += f"Price: {link['totalPrice']} {link['currency']} Purchase Link: {link['url']}\n"
+        output += "------------------------------------------------------\n"
+    logger.debug(output)
+    return output

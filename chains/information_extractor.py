@@ -2,14 +2,7 @@ from langchain_community.chat_models import ChatOpenAI
 from langchain.prompts import ChatPromptTemplate
 from langchain.utils.openai_functions import convert_pydantic_to_openai_function
 from langchain.output_parsers.openai_functions import PydanticOutputFunctionsParser
-from utils.tools import get_id, get_cast_details, get_awards, get_plot, get_info, get_images
-from utils.tools import (
-    GetAwardsInput,
-    GetCastDetailsInput,
-    GetRatingInput,
-    GetPlotInput,
-    GetInfo
-)
+from utils.tools import get_airports, get_flights, get_hotels, get_restaurants
 from langchain.tools.render import format_tool_to_openai_function
 from schema.schema import UserIntent
 from langchain.agents.output_parsers import OpenAIFunctionsAgentOutputParser
@@ -19,7 +12,7 @@ from langchain.memory import ConversationBufferWindowMemory
 
 class Information_Extractor:
     """
-    A class used to extract information about movies and TV shows.
+    A class used to extract information about travel destinations.
 
     Attributes
     ----------
@@ -39,7 +32,7 @@ class Information_Extractor:
     route(result)
         Routes the result based on its type.
     get_information(user_intent)
-        Gets the information about a movie or TV show based on the user's intent.
+        Gets the information about a travel destination based on the user's intent.
     """
 
     def __init__(self, api_key) -> None:
@@ -56,7 +49,7 @@ class Information_Extractor:
             [
                 (
                     "system",
-                    """You are a helpful ai designed to extract information about movies and TV shows.
+                    """You are a helpful ai designed to extract information about travel destinations.
                     """,
                 ),
                 ("user", "{input}"),
@@ -64,7 +57,7 @@ class Information_Extractor:
         )
         self.functions = [
             format_tool_to_openai_function(f)
-            for f in [get_cast_details, get_awards, get_plot, get_info, get_images]
+            for f in [get_airports, get_flights, get_hotels, get_restaurants]
         ]
         self.model = ChatOpenAI(
             api_key=self.api_key, temperature=0.0, model="gpt-3.5-turbo-0125"
@@ -93,18 +86,16 @@ class Information_Extractor:
             return result.return_values["output"]
         else:
             tools = {
-                "get_info": get_info,
-                "get_plot": get_plot,
-                "get_cast_details": get_cast_details,
-                # "get_rating": get_rating,
-                "get_awards": get_awards,
-                "get_images": get_images
+                "get_airports": get_airports,
+                "get_flights": get_flights,
+                "get_hotels": get_hotels,
+                "get_restaurants": get_restaurants
             }
             return tools[result.tool].run(result.tool_input)
 
     def get_information(self, user_intent: UserIntent) -> str:
         """
-        Gets the information about a movie or TV show based on the user's intent.
+        Gets the information about a travel destination based on the user's intent.
 
         Parameters
         ----------
@@ -114,10 +105,9 @@ class Information_Extractor:
         Returns
         -------
             str
-                The information about the movie or TV show.
+                The information about the travel destination.
         """
         #get_id(user_intent.name)
-        movie_info: str = get_info(user_intent.name)
-        input_query = f"I want to know about the movie with id {movie_info['id']} or name {movie_info['title']} and want to talk about the {user_intent.intent}."
+        input_query = f"I want to know about the travel destination with name {user_intent.name} and want to talk about the {user_intent.intent}."
         information: str = self.chain.invoke({"input": input_query})
         return information
