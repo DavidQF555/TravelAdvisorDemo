@@ -2,7 +2,7 @@ from langchain_community.chat_models import ChatOpenAI
 from langchain.prompts import ChatPromptTemplate
 from langchain.utils.openai_functions import convert_pydantic_to_openai_function
 from langchain.output_parsers.openai_functions import PydanticOutputFunctionsParser
-from utils.tools import get_airports, get_flights, get_hotels, get_restaurants
+from utils.tools import get_airports, get_hotels, get_restaurants
 from langchain.tools.render import format_tool_to_openai_function
 from schema.schema import UserIntent
 from langchain.agents.output_parsers import OpenAIFunctionsAgentOutputParser
@@ -57,7 +57,7 @@ class Information_Extractor:
         )
         self.functions = [
             format_tool_to_openai_function(f)
-            for f in [get_airports, get_flights, get_hotels, get_restaurants]
+            for f in [get_airports, get_hotels, get_restaurants]
         ]
         self.model = ChatOpenAI(
             api_key=self.api_key, temperature=0.0, model="gpt-3.5-turbo-0125"
@@ -87,7 +87,6 @@ class Information_Extractor:
         else:
             tools = {
                 "get_airports": get_airports,
-                "get_flights": get_flights,
                 "get_hotels": get_hotels,
                 "get_restaurants": get_restaurants
             }

@@ -36,9 +36,11 @@ if prompt := st.chat_input(
             st.markdown("Let me check that for you...")
         user_intent = tagger.extract_information(prompt)
         with st.chat_message("assistant"):
-            st.markdown(
-                f"Got it! You want to know about the {user_intent.name} and want to talk about the {user_intent.intent}."
-            )
+            if user_intent.intent:
+                text = f"Got it! You want to know about {user_intent.name} and want to talk about the {user_intent.intent}."
+            else:
+                text = f"Got it! You want to know about {user_intent.name}."
+            st.markdown(text)
         information = information_extractor.get_information(user_intent)
         summary = summarizer.summarize(information, prompt)
         # Display assistant response in chat message container

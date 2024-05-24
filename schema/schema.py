@@ -14,6 +14,5 @@ class UserIntent(BaseModel):
         description="""The topic the user wants to talk about. Can be one of the following:
                          - "airports": The user wants to know the airports near the travel destination.
                          - "hotels": The user wants to know the hotels near the travel destination.
-                         - "restraunts": The user wants to know the restraunts near the travel destination.
-                         - "flights": The user wants to know the flights to or from the travel destination."""
+                         - "restraunts": The user wants to know the restraunts near the travel destination."""
     )
