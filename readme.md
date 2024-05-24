@@ -1,4 +1,4 @@
-# DestGPT - Sample Code for API Calling AI Agent
+# DestGPT - API Calling AI Agent
 
 ## Overview
 Sample code for building an AI agent that calls Trip Advisor's API 
